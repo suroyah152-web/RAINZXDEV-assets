@@ -1584,9 +1584,10 @@ local function showKeyAuthLogin()
     statusText.TextWrap = true
     statusText.TextXAlignment = Enum.TextXAlignment.Center
 
+    local btnWidth = 150
     local loginButton = create("TextButton", {
         Position = UDim2.fromOffset(16, 204),
-        Size = UDim2.new(1, -160, 0, 32),
+        Size = UDim2.fromOffset(btnWidth, 32),
         BackgroundColor3 = THEME.Accent,
         BorderColor3 = THEME.BorderDark,
         BorderSizePixel = 1,
@@ -1595,14 +1596,14 @@ local function showKeyAuthLogin()
         Text = "LOGIN",
         TextColor3 = Color3.fromRGB(255, 255, 255),
         TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Center,
         ZIndex = 502,
         Parent = overlay,
     })
 
     local cancelButton = create("TextButton", {
-        Position = UDim2.fromOffset(-112, 204),
-        AnchorPoint = Vector2.new(1, 0),
-        Size = UDim2.new(1, -160, 0, 32),
+        Position = UDim2.fromOffset(16 + btnWidth + 8, 204),
+        Size = UDim2.fromOffset(btnWidth, 32),
         BackgroundColor3 = THEME.Element,
         BorderColor3 = THEME.BorderDark,
         BorderSizePixel = 1,
@@ -1611,6 +1612,7 @@ local function showKeyAuthLogin()
         Text = "CANCEL",
         TextColor3 = THEME.Text,
         TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Center,
         ZIndex = 502,
         Parent = overlay,
     })
