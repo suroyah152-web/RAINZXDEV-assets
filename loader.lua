@@ -1342,6 +1342,293 @@ tween(
 )
 
 -- =========================
+-- KeyAuth Login (RAINZXDEV)
+-- =========================
+
+-- TODO: isi ownerid (keyauth.win dashboard -> Settings -> Seller Key / Owner ID)
+-- dan nama aplikasi yang lo bikin di keyauth. Kalau kosong, login ditolak.
+local KEYAUTH_OWNERID = "ISI_OWNERID_DISINI"
+local KEYAUTH_APPNAME = "ISI_APPNAME_DISINI"
+local KEYAUTH_ENDPOINT = "https://keyauth.win/api/1.2/"
+
+local keyauthSessionId = nil
+
+local function urlEncode(text)
+    if type(text) ~= "string" then text = tostring(text or "") end
+    return HttpService:UrlEncode(text)
+end
+
+local function keyauthRequest(params)
+    if KEYAUTH_OWNERID == "ISI_OWNERID_DISINI" or KEYAUTH_APPNAME == "ISI_APPNAME_DISINI" then
+        return nil, "OWNERID / APPNAME belum diisi di loader"
+    end
+
+    local body = "type=" .. urlEncode(tostring(params["type"]))
+        .. "&name=" .. urlEncode(KEYAUTH_APPNAME)
+        .. "&ownerid=" .. urlEncode(KEYAUTH_OWNERID)
+
+    if keyauthSessionId then
+        body = body .. "&sessionid=" .. urlEncode(keyauthSessionId)
+    end
+
+    for key, value in pairs(params) do
+        if type(key) == "string" and key ~= "type" then
+            body = body .. "&" .. urlEncode(key) .. "=" .. urlEncode(tostring(value))
+        end
+    end
+
+    local ok, res = pcall(function()
+        return game:HttpPost(KEYAUTH_ENDPOINT, body, "application/x-www-form-urlencoded")
+    end)
+
+    if not ok or type(res) ~= "string" then
+        return nil, "Network error saat hubungi KeyAuth"
+    end
+
+    local okDec, decoded = pcall(function()
+        return HttpService:JSONDecode(res)
+    end)
+
+    if not okDec or type(decoded) ~= "table" then
+        return nil, "Response KeyAuth tidak valid"
+    end
+
+    return decoded, decoded
+end
+
+local function getPseudoHWID()
+    local id = nil
+    local ok = pcall(function()
+        if type(gethwid) == "function" then id = gethwid() end
+    end)
+    if ok and type(id) == "string" and #id > 0 then
+        return id
+    end
+
+    local env = (getgenv and getgenv()) or _G
+    if type(env) == "table" and env.HWID then
+        return tostring(env.HWID)
+    end
+
+    return HttpService:GenerateGUID(true)
+end
+
+local function subscriptionStillValid(res)
+    local info = res and res.info
+    if type(info) ~= "table" then
+        return true
+    end
+
+    local subs = info.subscriptions
+    if type(subs) ~= "table" then
+        return true
+    end
+
+    local now = os.time()
+    for _, sub in ipairs(subs) do
+        local expiry = tonumber(sub.expiry)
+        if type(expiry) == "number" and expiry > now then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function keyauthLogin(username, password)
+    local init, err = keyauthRequest({ type = "init" })
+    if not init or not init.success then
+        return nil, err or (init and init.message) or "init KeyAuth gagal"
+    end
+    keyauthSessionId = init.sessionid
+
+    local res = keyauthRequest({
+        type = "login",
+        username = tostring(username or ""),
+        password = tostring(password or ""),
+        hwid = getPseudoHWID(),
+    })
+
+    if not res or not res.success then
+        return nil, (res and res.message) or "username atau password salah"
+    end
+
+    if not subscriptionStillValid(res) then
+        return nil, "Langganan lo sudah kedaluwarsa"
+    end
+
+    return res, nil
+end
+
+local function showKeyAuthLogin()
+    if cancelled then
+        return nil
+    end
+
+    local authGui = create("ScreenGui", {
+        Name = "RAINZXDEV_KeyAuthLogin",
+        ResetOnSpawn = false,
+        IgnoreGuiInset = true,
+        DisplayOrder = 100000,
+    })
+
+    local parent = getGuiParent(authGui)
+    if not parent then
+        authGui:Destroy()
+        return nil
+    end
+    authGui.Parent = parent
+
+    local overlay = create("Frame", {
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5),
+        Size = UDim2.fromOffset(340, 292),
+        BackgroundColor3 = THEME.Main,
+        BorderColor3 = THEME.BorderDark,
+        BorderSizePixel = 1,
+        Active = true,
+        ZIndex = 500,
+        Parent = authGui,
+    })
+
+    local title = codeLabel(overlay, "RAINZXDEV Hub", 15, THEME.BrightText, 501)
+    title.Position = UDim2.fromOffset(16, 14)
+
+    local subtitle = codeLabel(overlay, "Login KeyAuth untuk lanjut", 10, THEME.DimText, 501)
+    subtitle.Position = UDim2.fromOffset(16, 38)
+
+    local userBox = create("TextBox", {
+        Position = UDim2.fromOffset(16, 64),
+        Size = UDim2.new(1, -32, 0, 34),
+        BackgroundColor3 = THEME.Element,
+        BorderColor3 = THEME.BorderDark,
+        BorderSizePixel = 1,
+        Font = Enum.Font.Code,
+        Text = "",
+        PlaceholderText = "Type your username here.",
+        TextColor3 = THEME.BrightText,
+        PlaceholderColor3 = THEME.DimText,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        ZIndex = 501,
+        Parent = overlay,
+    })
+    create("UIPadding", { PaddingLeft = UDim.new(0, 8), Parent = userBox })
+
+    local passBox = create("TextBox", {
+        Position = UDim2.fromOffset(16, 106),
+        Size = UDim2.new(1, -32, 0, 34),
+        BackgroundColor3 = THEME.Element,
+        BorderColor3 = THEME.BorderDark,
+        BorderSizePixel = 1,
+        Font = Enum.Font.Code,
+        Text = "",
+        PlaceholderText = "Type your password here.",
+        TextColor3 = THEME.BrightText,
+        PlaceholderColor3 = THEME.DimText,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        ZIndex = 501,
+        Parent = overlay,
+    })
+    create("UIPadding", { PaddingLeft = UDim.new(0, 8), Parent = passBox })
+
+    local statusText = codeLabel(overlay, "", 10, THEME.DimText, 502)
+    statusText.Position = UDim2.fromOffset(16, 148)
+    statusText.Size = UDim2.new(1, -32, 0, 44)
+    statusText.TextWrap = true
+    statusText.TextXAlignment = Enum.TextXAlignment.Center
+
+    local loginButton = create("TextButton", {
+        Position = UDim2.fromOffset(16, 204),
+        Size = UDim2.new(1, -160, 0, 32),
+        BackgroundColor3 = THEME.Accent,
+        BorderColor3 = THEME.BorderDark,
+        BorderSizePixel = 1,
+        AutoButtonColor = false,
+        Font = Enum.Font.Code,
+        Text = "LOGIN",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 13,
+        ZIndex = 502,
+        Parent = overlay,
+    })
+
+    local cancelButton = create("TextButton", {
+        Position = UDim2.fromOffset(-112, 204),
+        AnchorPoint = Vector2.new(1, 0),
+        Size = UDim2.new(1, -160, 0, 32),
+        BackgroundColor3 = THEME.Element,
+        BorderColor3 = THEME.BorderDark,
+        BorderSizePixel = 1,
+        AutoButtonColor = false,
+        Font = Enum.Font.Code,
+        Text = "CANCEL",
+        TextColor3 = THEME.Text,
+        TextSize = 13,
+        ZIndex = 502,
+        Parent = overlay,
+    })
+
+    local result = false -- akan di-set jadi table user saat sukses
+
+    loginButton.MouseButton1Click:Connect(function()
+        if type(result) == "table" then
+            return
+        end
+
+        statusText.TextColor3 = THEME.Text
+        statusText.Text = "Checking..."
+
+        local user = userBox.Text
+        local pass = passBox.Text
+
+        if #user == 0 or #pass == 0 then
+            statusText.TextColor3 = THEME.Danger
+            statusText.Text = "Username / password kosong"
+            return
+        end
+
+        local ok, loginRes = keyauthLogin(user, pass)
+
+        if ok and type(loginRes) == "table" then
+            result = {
+                user = user,
+                session = keyauthSessionId,
+            }
+            statusText.TextColor3 = THEME.Success
+            statusText.Text = "Login sukses. Loading script..."
+            task.wait(0.6)
+            authGui:Destroy()
+        else
+            statusText.TextColor3 = THEME.Danger
+            statusText.Text = tostring(loginRes or "Login gagal")
+        end
+    end)
+
+    cancelButton.MouseButton1Click:Connect(function()
+        cancelled = true
+        pcall(function() authGui:Destroy() end)
+    end)
+
+    userBox:CaptureFocus()
+
+    while type(result) ~= "table" and not cancelled and authGui.Parent do
+        task.wait(0.05)
+    end
+
+    pcall(function() authGui:Destroy() end)
+
+    if cancelled then
+        return nil
+    end
+
+    return result
+end
+
+-- =========================
 -- Loader sequence
 -- =========================
 
@@ -1398,6 +1685,28 @@ task.spawn(function()
             return
         end
     end
+
+    -- Pintu masuk: wajib login KeyAuth sebelum isi cheat dikasih.
+    setStatus("RAINZXDEV Hub", "KeyAuth required")
+    setProgress(0.36)
+
+    local authResult = showKeyAuthLogin()
+
+    if cancelled then
+        return
+    end
+
+    if not authResult or type(authResult) ~= "table" then
+        fail("Auth Failed", "Login KeyAuth gagal / dibatalkan")
+        return
+    end
+
+    setStatus(
+        "RAINZXDEV Hub",
+        "Authenticated: " .. tostring(authResult.user)
+    )
+    setProgress(0.40)
+    task.wait(0.15)
 
     -- Automatic detection and manual selection intentionally converge here.
     -- Whatever the user selected is the exact published script source that gets fetched,
