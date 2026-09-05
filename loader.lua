@@ -1349,7 +1349,12 @@ tween(
 -- dan nama aplikasi yang lo bikin di keyauth. Kalau kosong, login ditolak.
 local KEYAUTH_OWNERID = "aebv4PHEZR"
 local KEYAUTH_APPNAME = "Yhsad348's Application"
-local KEYAUTH_ENDPOINT = "https://keyauth.win/api/1.3/"
+local KEYAUTH_ENDPOINTS = {
+    "https://keyauth.win/api/1.3/",
+    "https://keyauth.win/api/1.2/",
+    "https://keyauth.win/api/1.2",
+    "https://keyauth.win/api/1.3",
+}
 
 local keyauthSessionId = nil
 
@@ -1389,37 +1394,49 @@ local function keyauthRequest(params)
     end
 
     local query = keyauthBuildQuery(params)
-    local url = KEYAUTH_ENDPOINT .. "?" .. query
-    local raw = nil
+    local errors = {}
 
-    local okGet, resGet = pcall(function()
-        return game:HttpGet(url)
-    end)
-    if okGet and type(resGet) == "string" and #resGet > 0 then
-        raw = resGet
-    else
-        local okPost, resPost = pcall(function()
-            return game:HttpPost(KEYAUTH_ENDPOINT, query, "application/x-www-form-urlencoded")
+    for _, endpoint in ipairs(KEYAUTH_ENDPOINTS) do
+        local url = endpoint .. "?" .. query
+        local okGet, resGet = pcall(function()
+            return game:HttpGet(url)
         end)
-        if okPost and type(resPost) == "string" and #resPost > 0 then
-            raw = resPost
+        if okGet and type(resGet) == "string" and #resGet > 0 then
+            local okDec, decoded = pcall(function()
+                return HttpService:JSONDecode(resGet)
+            end)
+            if okDec and type(decoded) == "table" then
+                return decoded, decoded
+            end
+            warn("[RAINZXDEV] raw non-JSON di " .. endpoint .. ": " .. tostring(resGet):sub(1, 200))
+            errors[#errors + 1] = endpoint .. " (bukan JSON)"
+        else
+            local okPost, resPost = pcall(function()
+                return game:HttpPost(endpoint, query, "application/x-www-form-urlencoded")
+            end)
+            local postVal = ""
+            if okPost and type(resPost) == "string" then
+                postVal = resPost
+                if #postVal > 0 then
+                    local okDec2, decoded2 = pcall(function()
+                        return HttpService:JSONDecode(postVal)
+                    end)
+                    if okDec2 and type(decoded2) == "table" then
+                        return decoded2, decoded2
+                    end
+                end
+            end
+            errors[#errors + 1] = endpoint
+                .. " GET=" .. tostring(okGet) .. " len=" .. tostring((type(resGet) == "string" and #resGet) or 0)
+                .. " POST=" .. tostring(okPost) .. " len=" .. tostring(#postVal)
         end
     end
 
-    if not raw then
-        return nil, "Network error saat hubungi KeyAuth"
+    local detail = table.concat(errors, " | ")
+    if #detail > 120 then
+        detail = detail:sub(1, 120) .. "..."
     end
-
-    local okDec, decoded = pcall(function()
-        return HttpService:JSONDecode(raw)
-    end)
-
-    if not okDec or type(decoded) ~= "table" then
-        warn("[RAINZXDEV] KeyAuth raw response: " .. tostring(raw):sub(1, 200))
-        return nil, "Response KeyAuth aneh: " .. tostring(raw):sub(1, 90)
-    end
-
-    return decoded, decoded
+    return nil, "Semua endpoint gagal: " .. detail
 end
 
 local function getPseudoHWID()
