@@ -1347,8 +1347,8 @@ tween(
 
 -- TODO: isi ownerid (keyauth.win dashboard -> Settings -> Seller Key / Owner ID)
 -- dan nama aplikasi yang lo bikin di keyauth. Kalau kosong, login ditolak.
-local KEYAUTH_OWNERID = "ISI_OWNERID_DISINI"
-local KEYAUTH_APPNAME = "ISI_APPNAME_DISINI"
+local KEYAUTH_OWNERID = "aebv4PHEZR"
+local KEYAUTH_APPNAME = "Yhsad348's Application"
 local KEYAUTH_ENDPOINT = "https://keyauth.win/api/1.2/"
 
 local keyauthSessionId = nil
