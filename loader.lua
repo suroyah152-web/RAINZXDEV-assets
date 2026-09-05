@@ -1349,7 +1349,12 @@ tween(
 -- dan nama aplikasi yang lo bikin di keyauth. Kalau kosong, login ditolak.
 local KEYAUTH_OWNERID = "aebv4PHEZR"
 local KEYAUTH_APPNAME = "Yhsad348's Application"
-local KEYAUTH_ENDPOINT = "https://keyauth.win/api/1.2/"
+local KEYAUTH_ENDPOINT = "https://keyauth.win/api/1.3/"
+
+-- Password paten yang sama dipakai SEMUA user. Saat lo bikin user di
+-- https://keyauth.cc/app/?page=users, isi password-nya sama dengan nilai ini.
+-- User cuma ketik username, password dikirim otomatis dari loader.
+local KEYAUTH_USER_PASSWORD = "RAINZX8686SEX"
 
 local keyauthSessionId = nil
 
@@ -1435,7 +1440,7 @@ local function subscriptionStillValid(res)
     return false
 end
 
-local function keyauthLogin(username, password)
+local function keyauthLogin(username)
     local init, err = keyauthRequest({ type = "init" })
     if not init or not init.success then
         return nil, err or (init and init.message) or "init KeyAuth gagal"
@@ -1445,12 +1450,12 @@ local function keyauthLogin(username, password)
     local res = keyauthRequest({
         type = "login",
         username = tostring(username or ""),
-        password = tostring(password or ""),
+        pass = KEYAUTH_USER_PASSWORD,
         hwid = getPseudoHWID(),
     })
 
     if not res or not res.success then
-        return nil, (res and res.message) or "username atau password salah"
+        return nil, (res and res.message) or "username tidak terdaftar"
     end
 
     if not subscriptionStillValid(res) then
@@ -1482,7 +1487,7 @@ local function showKeyAuthLogin()
     local overlay = create("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.fromOffset(340, 292),
+        Size = UDim2.fromOffset(340, 248),
         BackgroundColor3 = THEME.Main,
         BorderColor3 = THEME.BorderDark,
         BorderSizePixel = 1,
@@ -1494,7 +1499,7 @@ local function showKeyAuthLogin()
     local title = codeLabel(overlay, "RAINZXDEV Hub", 15, THEME.BrightText, 501)
     title.Position = UDim2.fromOffset(16, 14)
 
-    local subtitle = codeLabel(overlay, "Login KeyAuth untuk lanjut", 10, THEME.DimText, 501)
+    local subtitle = codeLabel(overlay, "Masukkan username KeyAuth kamu", 10, THEME.DimText, 501)
     subtitle.Position = UDim2.fromOffset(16, 38)
 
     local userBox = create("TextBox", {
@@ -1516,33 +1521,14 @@ local function showKeyAuthLogin()
     })
     create("UIPadding", { PaddingLeft = UDim.new(0, 8), Parent = userBox })
 
-    local passBox = create("TextBox", {
-        Position = UDim2.fromOffset(16, 106),
-        Size = UDim2.new(1, -32, 0, 34),
-        BackgroundColor3 = THEME.Element,
-        BorderColor3 = THEME.BorderDark,
-        BorderSizePixel = 1,
-        Font = Enum.Font.Code,
-        Text = "",
-        PlaceholderText = "Type your password here.",
-        TextColor3 = THEME.BrightText,
-        PlaceholderColor3 = THEME.DimText,
-        TextSize = 13,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ClearTextOnFocus = false,
-        ZIndex = 501,
-        Parent = overlay,
-    })
-    create("UIPadding", { PaddingLeft = UDim.new(0, 8), Parent = passBox })
-
     local statusText = codeLabel(overlay, "", 10, THEME.DimText, 502)
-    statusText.Position = UDim2.fromOffset(16, 148)
+    statusText.Position = UDim2.fromOffset(16, 106)
     statusText.Size = UDim2.new(1, -32, 0, 44)
     statusText.TextWrap = true
     statusText.TextXAlignment = Enum.TextXAlignment.Center
 
     local loginButton = create("TextButton", {
-        Position = UDim2.fromOffset(16, 204),
+        Position = UDim2.fromOffset(16, 162),
         Size = UDim2.new(1, -160, 0, 32),
         BackgroundColor3 = THEME.Accent,
         BorderColor3 = THEME.BorderDark,
@@ -1557,7 +1543,7 @@ local function showKeyAuthLogin()
     })
 
     local cancelButton = create("TextButton", {
-        Position = UDim2.fromOffset(-112, 204),
+        Position = UDim2.fromOffset(-112, 162),
         AnchorPoint = Vector2.new(1, 0),
         Size = UDim2.new(1, -160, 0, 32),
         BackgroundColor3 = THEME.Element,
@@ -1583,15 +1569,14 @@ local function showKeyAuthLogin()
         statusText.Text = "Checking..."
 
         local user = userBox.Text
-        local pass = passBox.Text
 
-        if #user == 0 or #pass == 0 then
+        if #user == 0 then
             statusText.TextColor3 = THEME.Danger
-            statusText.Text = "Username / password kosong"
+            statusText.Text = "Username kosong"
             return
         end
 
-        local ok, loginRes = keyauthLogin(user, pass)
+        local ok, loginRes = keyauthLogin(user)
 
         if ok and type(loginRes) == "table" then
             result = {
