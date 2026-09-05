@@ -1,0 +1,1505 @@
+--[[
+    RAINZXDEV Hub - Responsive Release Loader
+
+    Supported places:
+      Get Rich ASAP          : 128481067661991
+      Chicken Farm           : 137233438285284
+      SevenM Hood            : 131558436575033
+      +1 Speed Monkey Escape : 114697347887839
+      +1 Power Per Click     : 74889851913797
+      Dig & Clean             : 83038462357724
+      Magic Loot             : 133188236593503
+      Sniper Arena universe  : GameId 9534705677 (all current/future subplaces)
+      One Tap universe       : GameId 9294074907 (root PlaceId 90568084448279)
+      Kick a Lucky Block     : GameId 10004244222 (root PlaceId 89469502395769)
+      Murder Mystery 2       : 142823291
+      Build a Gun Army        : 134162299584012
+
+    One free loader for all supported RAINZXDEV scripts.
+    Includes automatic PlaceId + universe detection, a manual script dropdown, and universal anti-AFK.
+]]
+
+local ENV = (getgenv and getgenv()) or _G
+
+-- Shared persistent config defaults for every RAINZXDEV script launched by the hub.
+ENV.__rainzxdev_CONFIG_SHARED_STATE =
+    ENV.__rainzxdev_CONFIG_SHARED_STATE
+    or {
+        Root = "RAINZXDEV/Configs",
+        AutoSaveDefault = true,
+        AutoLoadDefault = true,
+    }
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
+local HttpService = game:GetService("HttpService")
+
+ENV.__rainzxdev_UI_SHARED_STATE = ENV.__rainzxdev_UI_SHARED_STATE or {
+    ToggleKeyName = "K",
+    LayoutMode = "Auto",
+    UIScalePercent = 100,
+}
+
+local SHARED_UI_STATE = ENV.__rainzxdev_UI_SHARED_STATE
+SHARED_UI_STATE.LayoutMode = tostring(SHARED_UI_STATE.LayoutMode or "Auto")
+SHARED_UI_STATE.UIScalePercent = math.clamp(tonumber(SHARED_UI_STATE.UIScalePercent) or 100, 75, 125)
+
+local function normalizeLayoutMode(value)
+    local lowered = string.lower(tostring(value or "Auto"))
+    if lowered == "phone" or lowered == "mobile" then
+        return "Phone"
+    elseif lowered == "desktop" or lowered == "pc" then
+        return "Desktop"
+    end
+    return "Auto"
+end
+
+local function getViewportSize()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    if viewport.X < 1 or viewport.Y < 1 then
+        return Vector2.new(1280, 720)
+    end
+    return viewport
+end
+
+local function resolveLayoutMode(mode, viewport)
+    mode = normalizeLayoutMode(mode)
+    if mode ~= "Auto" then
+        return mode
+    end
+    viewport = viewport or getViewportSize()
+    local smallViewport = viewport.X < 760 or viewport.Y < 500
+    local touchPhone = UserInputService.TouchEnabled and math.min(viewport.X, viewport.Y) <= 720
+    return (smallViewport or touchPhone) and "Phone" or "Desktop"
+end
+
+local function loadSharedUIPreferences()
+    if type(readfile) ~= "function" or type(isfile) ~= "function" then
+        return
+    end
+
+    local root = tostring((ENV.__rainzxdev_CONFIG_SHARED_STATE or {}).Root or "RAINZXDEV/Configs")
+    local path = root .. "/_ui_layout.json"
+    local okExists, exists = pcall(isfile, path)
+    if not okExists or not exists then
+        return
+    end
+
+    local okRead, text = pcall(readfile, path)
+    if not okRead or type(text) ~= "string" then
+        return
+    end
+
+    local okDecode, data = pcall(function()
+        return HttpService:JSONDecode(text)
+    end)
+    if not okDecode or type(data) ~= "table" then
+        return
+    end
+
+    SHARED_UI_STATE.LayoutMode = normalizeLayoutMode(data.LayoutMode or SHARED_UI_STATE.LayoutMode)
+    SHARED_UI_STATE.UIScalePercent = math.clamp(
+        tonumber(data.UIScalePercent) or SHARED_UI_STATE.UIScalePercent or 100,
+        75,
+        125
+    )
+end
+
+loadSharedUIPreferences()
+
+
+-- =========================
+-- Universal Anti-AFK
+-- =========================
+
+local function getGlobalEnvironment()
+    if type(getgenv) == "function" then
+        local ok, env = pcall(getgenv)
+        if ok and type(env) == "table" then
+            return env
+        end
+    end
+    return _G
+end
+
+local GLOBAL_ENV = getGlobalEnvironment()
+local ANTI_AFK_KEY = "__rainzxdev_LOADER_ANTI_AFK"
+
+local function enableAntiAFK()
+    local oldState = GLOBAL_ENV[ANTI_AFK_KEY]
+    if type(oldState) == "table" and oldState.Connection then
+        pcall(function()
+            oldState.Connection:Disconnect()
+        end)
+    end
+
+    local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+    local connection = player.Idled:Connect(function()
+        pcall(function()
+            VirtualUser:CaptureController()
+        end)
+
+        pcall(function()
+            VirtualUser:ClickButton2(Vector2.new(0, 0))
+        end)
+
+        pcall(function()
+            local camera = workspace.CurrentCamera
+            local cameraCFrame = camera and camera.CFrame or CFrame.new()
+            VirtualUser:Button2Down(Vector2.new(0, 0), cameraCFrame)
+            task.wait(0.05)
+            VirtualUser:Button2Up(Vector2.new(0, 0), cameraCFrame)
+        end)
+    end)
+
+    GLOBAL_ENV[ANTI_AFK_KEY] = {
+        Connection = connection,
+        Enabled = true,
+    }
+end
+
+enableAntiAFK()
+
+local SNIPER_ARENA_ROUTE = {
+    name = "Sniper Arena",
+    source = "github.com/RAINZXDEV/Sniper-Arena",
+    url = "https://raw.githubusercontent.com/RAINZXDEV/Sniper-Arena/main/Sniper%20Arena.lua",
+}
+
+
+local ONE_TAP_ROUTE = {
+    name = "One Tap",
+    source = "github.com/RAINZXDEV/One-Tap",
+    url = "https://raw.githubusercontent.com/RAINZXDEV/One-Tap/main/onetap.lua",
+}
+
+local KICK_A_LUCKY_BLOCK_ROUTE = {
+    name = "Kick a Lucky Block",
+    source = "github.com/RAINZXDEV/Kick-a-Lucky-Block",
+    url = "https://raw.githubusercontent.com/RAINZXDEV/Kick-a-Lucky-Block/main/Kick%20a%20Lucky%20Block.lua",
+}
+
+local UNIVERSE_ROUTES = {
+    -- Universe routing keeps supported subplaces working without hardcoding each PlaceId.
+    [9534705677] = SNIPER_ARENA_ROUTE,
+    [9294074907] = ONE_TAP_ROUTE,
+    [10004244222] = KICK_A_LUCKY_BLOCK_ROUTE,
+}
+
+local ROUTES = {
+    [90568084448279] = ONE_TAP_ROUTE,
+    [89469502395769] = KICK_A_LUCKY_BLOCK_ROUTE,
+    [83038462357724] = {
+        name = "Dig & Clean",
+        source = "github.com/RAINZXDEV/Dig-Clean-",
+        url = "https://raw.githubusercontent.com/RAINZXDEV/Dig-Clean-/main/Dig%20%26%20Clean.lua",
+    },
+    [134162299584012] = {
+        name = "Build a Gun Army",
+        source = "rainzxdev.site/scripts/build-a-gun-army/autofarm.lua",
+        url = "https://rainzxdev.site/scripts/build-a-gun-army/autofarm.lua",
+    },
+    [142823291] = {
+        name = "Murder Mystery 2",
+        source = "rainzxdev.site/scripts/murder-mystery-2/mm2.lua",
+        url = "https://rainzxdev.site/scripts/murder-mystery-2/mm2.lua",
+    },
+    [74889851913797] = {
+        name = "+1 Power Per Click",
+        source = "github.com/RAINZXDEV/-1-Power-Per-Click",
+        url = "https://raw.githubusercontent.com/RAINZXDEV/-1-Power-Per-Click/main/%2B1%20Power%20Per%20Click.lua",
+    },
+    [133188236593503] = {
+        name = "Magic Loot",
+        source = "rainzxdev.site/scripts/magic-loot/autofarm.lua",
+        url = "https://rainzxdev.site/scripts/magic-loot/autofarm.lua",
+    },
+    [128481067661991] = {
+        name = "Get Rich ASAP",
+        source = "github.com/RAINZXDEV/Get-rich-asap",
+        url = "https://raw.githubusercontent.com/RAINZXDEV/Get-rich-asap/main/Get%20Rich%20Asap%20Script",
+    },
+    [137233438285284] = {
+        name = "Chicken Farm",
+        source = "github.com/RAINZXDEV/Chicken-Farm-Auto",
+        url = "https://raw.githubusercontent.com/RAINZXDEV/Chicken-Farm-Auto/main/Chicken%20Empire",
+    },
+    [131558436575033] = {
+        name = "SevenM Hood",
+        source = "github.com/RAINZXDEV/SevenM-Hood",
+        url = "https://raw.githubusercontent.com/RAINZXDEV/SevenM-Hood/main/aim.lua",
+    },
+    [114697347887839] = {
+        name = "+1 Speed Monkey Escape",
+        source = "github.com/RAINZXDEV/1-Speed-Monkey-Escape",
+        url = "https://raw.githubusercontent.com/RAINZXDEV/1-Speed-Monkey-Escape/main/1%20Speed%20Monkey%20Escape.lua",
+    },
+    [122446657157717] = SNIPER_ARENA_ROUTE,
+    [119259569670784] = SNIPER_ARENA_ROUTE,
+}
+
+local THEME = {
+    -- Exact PuckUI v3.4 visual language.
+    Main = Color3.fromRGB(12, 12, 12),
+    Top = Color3.fromRGB(12, 12, 12),
+    Tab = Color3.fromRGB(12, 12, 12),
+    Section = Color3.fromRGB(18, 18, 18),
+    SectionInner = Color3.fromRGB(18, 18, 18),
+    Element = Color3.fromRGB(24, 24, 24),
+    ElementHover = Color3.fromRGB(32, 32, 32),
+    Border = Color3.fromRGB(45, 45, 45),
+    BorderDark = Color3.fromRGB(5, 5, 5),
+    Text = Color3.fromRGB(170, 170, 170),
+    DimText = Color3.fromRGB(100, 100, 100),
+    BrightText = Color3.fromRGB(230, 230, 230),
+    Accent = Color3.fromRGB(0, 95, 255),
+    Danger = Color3.fromRGB(180, 58, 64),
+    Success = Color3.fromRGB(48, 145, 78),
+}
+
+local function create(className, properties)
+    local object = Instance.new(className)
+    local viewport = getViewportSize()
+    local phoneLayout = resolveLayoutMode(SHARED_UI_STATE.LayoutMode, viewport) == "Phone"
+
+    for key, value in pairs(properties or {}) do
+        if key == "TextSize" and phoneLayout and type(value) == "number" then
+            object[key] = math.floor(value * 1.10 + 0.5)
+        else
+            object[key] = value
+        end
+    end
+
+    return object
+end
+
+local function tween(object, duration, properties, style, direction)
+    local animation = TweenService:Create(
+        object,
+        TweenInfo.new(
+            duration or 0.12,
+            style or Enum.EasingStyle.Quad,
+            direction or Enum.EasingDirection.Out
+        ),
+        properties
+    )
+
+    animation:Play()
+    return animation
+end
+
+local function codeLabel(parent, text, size, color, zIndex)
+    return create("TextLabel", {
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Text = tostring(text or ""),
+        TextColor3 = color or THEME.Text,
+        TextSize = size or 12,
+        Font = Enum.Font.Code,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        ZIndex = zIndex or 10,
+        Parent = parent,
+    })
+end
+
+local function getGuiParent(screenGui)
+    -- Match PuckUI: PlayerGui first, then gethui as compatibility fallback.
+    local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+    local playerGui = player:FindFirstChildOfClass("PlayerGui")
+
+    if not playerGui then
+        playerGui = player:WaitForChild("PlayerGui", 10)
+    end
+
+    if playerGui then
+        local ok = pcall(function()
+            screenGui.Parent = playerGui
+        end)
+
+        if ok and screenGui.Parent == playerGui then
+            return playerGui
+        end
+    end
+
+    if type(gethui) == "function" then
+        local ok, target = pcall(gethui)
+
+        if ok and target then
+            local parented = pcall(function()
+                screenGui.Parent = target
+            end)
+
+            if parented then
+                return target
+            end
+        end
+    end
+
+    return nil
+end
+
+local function removeOld()
+    local possibleParents = {CoreGui}
+    local player = Players.LocalPlayer
+
+    if player then
+        local playerGui = player:FindFirstChildOfClass("PlayerGui")
+
+        if playerGui then
+            table.insert(possibleParents, playerGui)
+        end
+    end
+
+    if type(gethui) == "function" then
+        local ok, result = pcall(gethui)
+
+        if ok and result then
+            table.insert(possibleParents, result)
+        end
+    end
+
+    for _, parent in ipairs(possibleParents) do
+        pcall(function()
+            local old = parent:FindFirstChild("RAINZXDEVLoader")
+
+            if old then
+                old:Destroy()
+            end
+        end)
+    end
+end
+
+removeOld()
+
+local gui = create("ScreenGui", {
+    Name = "RAINZXDEVLoader",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    DisplayOrder = 10000,
+})
+
+getGuiParent(gui)
+
+local WINDOW_WIDTH = 480
+local WINDOW_HEIGHT = 260
+local EXPANDED_HEIGHT = 365
+local LOADER_LAYOUT = "Desktop"
+local LOADER_EXPANDED = false
+local LOADER_SCALE = 1
+
+local function calculateLoaderLayout()
+    local viewport = getViewportSize()
+    local resolved = resolveLayoutMode(SHARED_UI_STATE.LayoutMode, viewport)
+    local phoneLayout = resolved == "Phone"
+    local landscape = viewport.X > viewport.Y
+
+    if phoneLayout then
+        WINDOW_WIDTH = landscape and 500 or 350
+        WINDOW_HEIGHT = landscape and 235 or 260
+        EXPANDED_HEIGHT = landscape and 350 or 365
+    else
+        WINDOW_WIDTH = 480
+        WINDOW_HEIGHT = 260
+        EXPANDED_HEIGHT = 365
+    end
+
+    local requestedScale = math.clamp(tonumber(SHARED_UI_STATE.UIScalePercent) or 100, 75, 125) / 100
+    local fitScale = math.min(
+        (viewport.X - 16) / math.max(WINDOW_WIDTH, 1),
+        (viewport.Y - 16) / math.max(EXPANDED_HEIGHT, 1)
+    )
+
+    LOADER_LAYOUT = resolved
+    LOADER_SCALE = math.max(0.65, math.min(requestedScale, fitScale))
+end
+
+calculateLoaderLayout()
+local targetCardSize = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
+
+local shadow = create("Frame", {
+    Name = "Shadow",
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.new(0.5, 4, 0.5, 4),
+    Size = targetCardSize,
+    BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+    BackgroundTransparency = 0.5,
+    BorderSizePixel = 0,
+    ZIndex = 1,
+    Parent = gui,
+})
+
+local card = create("CanvasGroup", {
+    Name = "LoaderCard",
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.fromScale(0.5, 0.5),
+    Size = targetCardSize,
+    BackgroundColor3 = THEME.Main,
+    BackgroundTransparency = 0,
+    BorderColor3 = THEME.BorderDark,
+    BorderSizePixel = 1,
+    GroupTransparency = 1,
+    Active = true,
+    ZIndex = 2,
+    Parent = gui,
+})
+
+local cardScale = create("UIScale", {Scale = LOADER_SCALE, Parent = card})
+local shadowScale = create("UIScale", {Scale = LOADER_SCALE, Parent = shadow})
+
+local function applyLoaderResponsiveLayout()
+    if not gui.Parent then
+        return
+    end
+
+    calculateLoaderLayout()
+    targetCardSize = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
+    cardScale.Scale = LOADER_SCALE
+    shadowScale.Scale = LOADER_SCALE
+
+    local desired = LOADER_EXPANDED
+        and UDim2.fromOffset(WINDOW_WIDTH, EXPANDED_HEIGHT)
+        or targetCardSize
+    card.Size = desired
+    shadow.Size = desired
+end
+
+local viewportConnection = nil
+local function attachViewportListener()
+    if viewportConnection then
+        pcall(function() viewportConnection:Disconnect() end)
+        viewportConnection = nil
+    end
+    local camera = workspace.CurrentCamera
+    if camera then
+        viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+            task.defer(applyLoaderResponsiveLayout)
+        end)
+    end
+end
+
+attachViewportListener()
+local cameraConnection = workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    attachViewportListener()
+    task.defer(applyLoaderResponsiveLayout)
+end)
+
+gui.AncestryChanged:Connect(function(_, parent)
+    if parent == nil then
+        if viewportConnection then pcall(function() viewportConnection:Disconnect() end) end
+        if cameraConnection then pcall(function() cameraConnection:Disconnect() end) end
+    end
+end)
+
+-- -------------------------------------------------------------------------
+-- Procedural PuckUI rose / damask background
+-- -------------------------------------------------------------------------
+
+local roseBackground = create("CanvasGroup", {
+    Name = "RoseBackground",
+    Size = UDim2.fromScale(1, 1),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+    GroupTransparency = 0.78,
+    ZIndex = 3,
+    Parent = card,
+})
+
+local roseColor = Color3.fromRGB(255, 255, 255)
+
+local function softPart(parent, position, anchor, size, rotation, transparency)
+    local part = create("Frame", {
+        AnchorPoint = anchor or Vector2.new(0.5, 0.5),
+        Position = position,
+        Size = size,
+        Rotation = rotation or 0,
+        BackgroundColor3 = roseColor,
+        BackgroundTransparency = transparency or 0.84,
+        BorderSizePixel = 0,
+        ZIndex = 3,
+        Parent = parent,
+    })
+
+    create("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = part,
+    })
+
+    return part
+end
+
+local function createRose(x, y, scale, tilt)
+    local motif = create("Frame", {
+        Position = UDim2.fromOffset(x - 36, y - 36),
+        Size = UDim2.fromOffset(72, 72),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Rotation = tilt or 0,
+        ZIndex = 3,
+        Parent = roseBackground,
+    })
+
+    local center = UDim2.fromScale(0.5, 0.43)
+
+    for index = 0, 5 do
+        softPart(
+            motif,
+            center,
+            Vector2.new(0.5, 0.92),
+            UDim2.fromOffset(
+                math.max(6, math.floor(13 * scale)),
+                math.max(12, math.floor(24 * scale))
+            ),
+            index * 60,
+            0.78
+        )
+    end
+
+    for index = 0, 4 do
+        softPart(
+            motif,
+            center,
+            Vector2.new(0.5, 0.90),
+            UDim2.fromOffset(
+                math.max(4, math.floor(9 * scale)),
+                math.max(8, math.floor(16 * scale))
+            ),
+            index * 72 + 36,
+            0.72
+        )
+    end
+
+    softPart(
+        motif,
+        center,
+        Vector2.new(0.5, 0.5),
+        UDim2.fromOffset(4, 4),
+        0,
+        0.62
+    )
+
+    softPart(
+        motif,
+        UDim2.new(0.5, -5, 0.68, 0),
+        Vector2.new(1, 0.5),
+        UDim2.fromOffset(17, 4),
+        -32,
+        0.80
+    )
+
+    softPart(
+        motif,
+        UDim2.new(0.5, 5, 0.71, 0),
+        Vector2.new(0, 0.5),
+        UDim2.fromOffset(17, 4),
+        32,
+        0.80
+    )
+
+    local stem = create("Frame", {
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 0.60, 0),
+        Size = UDim2.fromOffset(1, 24),
+        BackgroundColor3 = roseColor,
+        BackgroundTransparency = 0.78,
+        BorderSizePixel = 0,
+        ZIndex = 2,
+        Parent = motif,
+    })
+
+    create("UIGradient", {
+        Rotation = 90,
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.12),
+            NumberSequenceKeypoint.new(1, 1),
+        }),
+        Parent = stem,
+    })
+end
+
+createRose(74, 112, 0.68, -7)
+createRose(220, 176, 0.60, 7)
+createRose(385, 105, 0.64, -5)
+createRose(448, 218, 0.52, 8)
+
+create("Frame", {
+    Name = "InnerBorder",
+    Position = UDim2.fromOffset(1, 1),
+    Size = UDim2.new(1, -2, 1, -2),
+    BackgroundTransparency = 1,
+    BorderColor3 = THEME.Border,
+    BorderSizePixel = 1,
+    ZIndex = 4,
+    Parent = card,
+})
+
+local titleBar = create("Frame", {
+    Name = "TitleBar",
+    Position = UDim2.fromOffset(2, 2),
+    Size = UDim2.new(1, -4, 0, 24),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ZIndex = 8,
+    Parent = card,
+})
+
+local titleLabel = codeLabel(
+    titleBar,
+    "RAINZXDEV Hub",
+    13,
+    THEME.BrightText,
+    11
+)
+titleLabel.Position = UDim2.fromOffset(6, 0)
+titleLabel.Size = UDim2.new(1, -92, 1, 0)
+
+local cancelled = false
+
+local closeButton = create("TextButton", {
+    Name = "Close",
+    AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, -2, 0, 2),
+    Size = UDim2.fromOffset(18, 19),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Font = Enum.Font.Code,
+    Text = "x",
+    TextSize = 12,
+    TextColor3 = THEME.DimText,
+    ZIndex = 15,
+    Parent = titleBar,
+})
+
+closeButton.MouseEnter:Connect(function()
+    tween(closeButton, 0.08, {TextColor3 = THEME.BrightText})
+end)
+
+closeButton.MouseLeave:Connect(function()
+    tween(closeButton, 0.08, {TextColor3 = THEME.DimText})
+end)
+
+closeButton.MouseButton1Click:Connect(function()
+    cancelled = true
+
+    pcall(function()
+        gui:Destroy()
+    end)
+end)
+
+local dragHandle = create("TextButton", {
+    Name = "DragHandle",
+    Position = UDim2.fromOffset(0, 0),
+    Size = UDim2.new(1, -42, 1, 0),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "",
+    Active = true,
+    ZIndex = 14,
+    Parent = titleBar,
+})
+
+local dragging = false
+local dragStart = nil
+local startPosition = nil
+
+dragHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPosition = card.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if not dragging or not dragStart or not startPosition then
+        return
+    end
+
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        local delta = input.Position - dragStart
+
+        card.Position = UDim2.new(
+            startPosition.X.Scale,
+            startPosition.X.Offset + delta.X,
+            startPosition.Y.Scale,
+            startPosition.Y.Offset + delta.Y
+        )
+
+        shadow.Position = UDim2.new(
+            card.Position.X.Scale,
+            card.Position.X.Offset + 4,
+            card.Position.Y.Scale,
+            card.Position.Y.Offset + 4
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+local accentTop = create("Frame", {
+    Name = "AccentTop",
+    Position = UDim2.fromOffset(2, 26),
+    Size = UDim2.new(1, -4, 0, 1),
+    BackgroundColor3 = THEME.Accent,
+    BorderSizePixel = 0,
+    ZIndex = 9,
+    Parent = card,
+})
+
+local contentHost = create("Frame", {
+    Name = "ContentHost",
+    AnchorPoint = Vector2.new(0.5, 0),
+    Position = UDim2.new(0.5, 0, 0, 58),
+    Size = UDim2.new(1, LOADER_LAYOUT == "Phone" and -28 or -48, 0, 132),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+    ZIndex = 6,
+    Parent = card,
+})
+
+local section = create("Frame", {
+    Name = "LoaderSection",
+    Size = UDim2.fromScale(1, 1),
+    BackgroundColor3 = THEME.Section,
+    BorderColor3 = THEME.Border,
+    BorderSizePixel = 1,
+    ZIndex = 7,
+    Parent = contentHost,
+})
+
+create("Frame", {
+    Position = UDim2.fromOffset(1, 1),
+    Size = UDim2.new(1, -2, 1, -2),
+    BackgroundTransparency = 1,
+    BorderColor3 = THEME.BorderDark,
+    BorderSizePixel = 1,
+    ZIndex = 8,
+    Parent = section,
+})
+
+local status = codeLabel(
+    section,
+    "Starting...",
+    13,
+    THEME.BrightText,
+    11
+)
+status.Position = UDim2.fromOffset(14, 22)
+status.Size = UDim2.new(1, -28, 0, 30)
+status.TextXAlignment = Enum.TextXAlignment.Center
+
+local detail = codeLabel(
+    section,
+    "Preparing RAINZXDEV loader...",
+    11,
+    THEME.DimText,
+    11
+)
+detail.Position = UDim2.fromOffset(14, 53)
+detail.Size = UDim2.new(1, -28, 0, 18)
+detail.TextXAlignment = Enum.TextXAlignment.Center
+detail.TextTruncate = Enum.TextTruncate.AtEnd
+
+local progressTrack = create("Frame", {
+    AnchorPoint = Vector2.new(0.5, 0),
+    Position = UDim2.new(0.5, 0, 0, 83),
+    Size = UDim2.new(1, -84, 0, 10),
+    BackgroundColor3 = THEME.Element,
+    BorderColor3 = THEME.BorderDark,
+    BorderSizePixel = 1,
+    ClipsDescendants = true,
+    ZIndex = 10,
+    Parent = section,
+})
+
+create("Frame", {
+    Position = UDim2.fromOffset(1, 1),
+    Size = UDim2.new(1, -2, 1, -2),
+    BackgroundTransparency = 1,
+    BorderColor3 = THEME.Border,
+    BorderSizePixel = 1,
+    ZIndex = 11,
+    Parent = progressTrack,
+})
+
+local progressFill = create("Frame", {
+    Size = UDim2.fromScale(0, 1),
+    BackgroundColor3 = THEME.Accent,
+    BorderSizePixel = 0,
+    ZIndex = 10,
+    Parent = progressTrack,
+})
+
+
+local autoText = codeLabel(
+    section,
+    "automatic script detection",
+    9,
+    THEME.DimText,
+    10
+)
+autoText.Position = UDim2.fromOffset(14, 102)
+autoText.Size = UDim2.new(1, -28, 0, 14)
+autoText.TextXAlignment = Enum.TextXAlignment.Center
+
+local progressValue = 0
+local changingStatus = false
+
+local function setProgress(value)
+    if cancelled then
+        return
+    end
+
+    value = math.clamp(tonumber(value) or 0, 0, 1)
+    progressValue = value
+
+    tween(
+        progressFill,
+        0.20,
+        {Size = UDim2.fromScale(value, 1)},
+        Enum.EasingStyle.Quad,
+        Enum.EasingDirection.Out
+    )
+
+end
+
+local function setStatus(mainText, detailText, color)
+    if cancelled
+        or not status.Parent
+        or not detail.Parent then
+        return
+    end
+
+    while changingStatus and not cancelled do
+        task.wait()
+    end
+
+    if cancelled then
+        return
+    end
+
+    changingStatus = true
+
+    local mainValue = tostring(mainText or "RAINZXDEV")
+    local detailValue = tostring(detailText or "")
+
+    -- Avoid needlessly fading when only the stage/detail changes. This makes
+    -- the very short loader feel calmer and stops text flicker.
+    local mainChanged = status.Text ~= mainValue
+
+    if mainChanged then
+        local fade = tween(
+            status,
+            0.06,
+            {TextTransparency = 1},
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out
+        )
+        fade.Completed:Wait()
+    end
+
+    if cancelled or not status.Parent then
+        changingStatus = false
+        return
+    end
+
+    status.Text = mainValue
+    status.TextColor3 = color or THEME.BrightText
+    detail.Text = detailValue
+
+    if mainChanged then
+        tween(status, 0.08, {TextTransparency = 0})
+    end
+
+    changingStatus = false
+end
+
+local function fail(stage, message)
+    if cancelled then
+        return
+    end
+
+    progressFill.BackgroundColor3 = THEME.Danger
+    accentTop.BackgroundColor3 = THEME.Danger
+    autoText.Text = "loader error"
+    autoText.TextColor3 = THEME.Danger
+
+    setStatus(
+        "Load Failed",
+        tostring(stage or "Loader Error")
+            .. " • "
+            .. tostring(message or "Unknown error"),
+        THEME.BrightText
+    )
+end
+
+local function fetchSource(url)
+    local ok, result = pcall(function()
+        return game:HttpGet(url)
+    end)
+
+    if ok
+        and type(result) == "string"
+        and #result > 0 then
+        return true, result
+    end
+
+    local requestFunction =
+        type(request) == "function" and request
+        or type(http_request) == "function" and http_request
+        or (
+            syn
+            and type(syn.request) == "function"
+            and syn.request
+            or nil
+        )
+        or (
+            http
+            and type(http.request) == "function"
+            and http.request
+            or nil
+        )
+
+    if type(requestFunction) == "function" then
+        local requestOk, response = pcall(requestFunction, {
+            Url = url,
+            Method = "GET",
+        })
+
+        if requestOk and type(response) == "table" then
+            local body = response.Body or response.body
+            local code =
+                response.StatusCode
+                or response.Status
+                or response.status
+
+            if type(body) == "string"
+                and #body > 0
+                and (
+                    not code
+                    or tonumber(code) == 200
+                ) then
+                return true, body
+            end
+        end
+    end
+
+    return false, result or "HTTP request unavailable"
+end
+
+local function chooseRouteManually(placeId)
+    if cancelled then
+        return nil
+    end
+
+    setStatus(
+        "Choose a Script",
+        "Automatic detection did not find this game"
+    )
+    setProgress(0.30)
+
+
+    local picker = create("CanvasGroup", {
+        Name = "ManualDropdown",
+        Position = UDim2.fromOffset(28, 100),
+        Size = UDim2.new(1, -56, 0, 34),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        GroupTransparency = 1,
+        ZIndex = 40,
+        Parent = section,
+    })
+
+
+    local selector = create("TextButton", {
+        Name = "Selector",
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundColor3 = THEME.Element,
+        BorderColor3 = THEME.BorderDark,
+        BorderSizePixel = 1,
+        AutoButtonColor = false,
+        Font = Enum.Font.Code,
+        Text = "  select script...",
+        TextColor3 = THEME.Text,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 42,
+        Parent = picker,
+    })
+
+    create("Frame", {
+        Position = UDim2.fromOffset(1, 1),
+        Size = UDim2.new(1, -2, 1, -2),
+        BackgroundTransparency = 1,
+        BorderColor3 = THEME.Border,
+        BorderSizePixel = 1,
+        ZIndex = 43,
+        Parent = selector,
+    })
+
+    local arrow = codeLabel(
+        selector,
+        "v",
+        11,
+        THEME.DimText,
+        44
+    )
+    arrow.AnchorPoint = Vector2.new(1, 0)
+    arrow.Position = UDim2.new(1, -8, 0, 0)
+    arrow.Size = UDim2.fromOffset(18, 30)
+    arrow.TextXAlignment = Enum.TextXAlignment.Center
+
+    local menu = create("ScrollingFrame", {
+        Name = "Options",
+        Position = UDim2.fromOffset(0, 36),
+        Size = UDim2.new(1, 0, 0, 154),
+        BackgroundColor3 = THEME.Section,
+        BorderColor3 = THEME.BorderDark,
+        BorderSizePixel = 1,
+        CanvasSize = UDim2.new(),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = THEME.DimText,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        Visible = false,
+        ZIndex = 60,
+        Parent = picker,
+    })
+
+    create("Frame", {
+        Position = UDim2.fromOffset(1, 1),
+        Size = UDim2.new(1, -2, 1, -2),
+        BackgroundTransparency = 1,
+        BorderColor3 = THEME.Border,
+        BorderSizePixel = 1,
+        ZIndex = 61,
+        Parent = menu,
+    })
+
+    create("UIPadding", {
+        PaddingTop = UDim.new(0, 5),
+        PaddingBottom = UDim.new(0, 5),
+        PaddingLeft = UDim.new(0, 5),
+        PaddingRight = UDim.new(0, 5),
+        Parent = menu,
+    })
+
+    create("UIListLayout", {
+        Padding = UDim.new(0, 4),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = menu,
+    })
+
+    local manualRoutes = {
+        ROUTES[83038462357724],
+        ROUTES[134162299584012],
+        ROUTES[142823291],
+        SNIPER_ARENA_ROUTE,
+        ONE_TAP_ROUTE,
+        ROUTES[74889851913797],
+        ROUTES[133188236593503],
+        ROUTES[128481067661991],
+        ROUTES[137233438285284],
+        ROUTES[131558436575033],
+        ROUTES[114697347887839],
+    }
+
+    local selectedRoute = nil
+    local open = false
+    local busy = false
+
+    local function setDropdown(openState)
+        if busy or cancelled then
+            return
+        end
+
+        open = openState == true
+        LOADER_EXPANDED = open
+
+        if open then
+            menu.Visible = true
+            arrow.Text = "^"
+
+            tween(
+                card,
+                0.18,
+                {Size = UDim2.fromOffset(WINDOW_WIDTH, EXPANDED_HEIGHT)}
+            )
+
+            tween(
+                shadow,
+                0.18,
+                {Size = UDim2.fromOffset(WINDOW_WIDTH, EXPANDED_HEIGHT)}
+            )
+
+            tween(
+                picker,
+                0.18,
+                {Size = UDim2.new(1, -56, 0, 196)}
+            )
+        else
+            arrow.Text = "v"
+            menu.Visible = false
+
+            tween(
+                card,
+                0.18,
+                {Size = targetCardSize}
+            )
+
+            tween(
+                shadow,
+                0.18,
+                {Size = targetCardSize}
+            )
+
+            tween(
+                picker,
+                0.18,
+                {Size = UDim2.new(1, -56, 0, 34)}
+            )
+        end
+    end
+
+    selector.MouseEnter:Connect(function()
+        if not busy then
+            tween(
+                selector,
+                0.08,
+                {BackgroundColor3 = THEME.ElementHover}
+            )
+        end
+    end)
+
+    selector.MouseLeave:Connect(function()
+        if not busy then
+            tween(
+                selector,
+                0.08,
+                {BackgroundColor3 = THEME.Element}
+            )
+        end
+    end)
+
+    selector.MouseButton1Click:Connect(function()
+        setDropdown(not open)
+    end)
+
+    for index, option in ipairs(manualRoutes) do
+        local routeOption = {
+            name = option.name,
+            source = option.source,
+            url = option.url,
+        }
+
+        local item = create("TextButton", {
+            Name = "Option" .. tostring(index),
+            LayoutOrder = index,
+            Size = UDim2.new(1, -2, 0, 27),
+            BackgroundColor3 = THEME.Element,
+            BorderColor3 = THEME.BorderDark,
+            BorderSizePixel = 1,
+            AutoButtonColor = false,
+            Font = Enum.Font.Code,
+            Text = "  " .. routeOption.name,
+            TextColor3 = THEME.Text,
+            TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 62,
+            Parent = menu,
+        })
+
+        create("Frame", {
+            Position = UDim2.fromOffset(1, 1),
+            Size = UDim2.new(1, -2, 1, -2),
+            BackgroundTransparency = 1,
+            BorderColor3 = THEME.Border,
+            BorderSizePixel = 1,
+            ZIndex = 63,
+            Parent = item,
+        })
+
+        item.MouseEnter:Connect(function()
+            if not busy then
+                tween(
+                    item,
+                    0.08,
+                    {BackgroundColor3 = THEME.ElementHover}
+                )
+            end
+        end)
+
+        item.MouseLeave:Connect(function()
+            if not busy then
+                tween(
+                    item,
+                    0.08,
+                    {BackgroundColor3 = THEME.Element}
+                )
+            end
+        end)
+
+        item.MouseButton1Click:Connect(function()
+            if busy or cancelled then
+                return
+            end
+
+            busy = true
+
+            selectedRoute = {
+                name = routeOption.name,
+                source = routeOption.source,
+                url = routeOption.url,
+            }
+
+            selector.Text = "  " .. selectedRoute.name
+
+            setStatus(
+                selectedRoute.name,
+                "Preparing script..."
+            )
+
+            item.BackgroundColor3 = THEME.ElementHover
+
+            open = false
+            menu.Visible = false
+            arrow.Text = "v"
+
+            task.wait(0.12)
+        end)
+    end
+
+    tween(picker, 0.12, {GroupTransparency = 0})
+
+    while not selectedRoute
+        and gui.Parent
+        and not cancelled do
+        task.wait(0.03)
+    end
+
+    if cancelled or not selectedRoute then
+        return nil
+    end
+
+    local fade = tween(
+        picker,
+        0.10,
+        {GroupTransparency = 1}
+    )
+
+    fade.Completed:Wait()
+
+    if picker.Parent then
+        picker:Destroy()
+    end
+
+
+    LOADER_EXPANDED = false
+    card.Size = targetCardSize
+    shadow.Size = targetCardSize
+
+    return selectedRoute
+end
+
+-- Restrained PuckUI entrance animation.
+card.Size = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT - 14)
+shadow.Size = card.Size
+
+tween(
+    card,
+    0.20,
+    {
+        GroupTransparency = 0,
+        Size = targetCardSize,
+    },
+    Enum.EasingStyle.Quad,
+    Enum.EasingDirection.Out
+)
+
+tween(
+    shadow,
+    0.20,
+    {Size = targetCardSize},
+    Enum.EasingStyle.Quad,
+    Enum.EasingDirection.Out
+)
+
+-- =========================
+-- Loader sequence
+-- =========================
+
+task.spawn(function()
+    task.wait(0.18)
+
+    if cancelled then return end
+
+    setStatus("RAINZXDEV Hub", "Detecting game...")
+    setProgress(0.08)
+
+    if not game:IsLoaded() then
+        local loaded = false
+        local connection
+        connection = game.Loaded:Connect(function()
+            loaded = true
+            if connection then
+                connection:Disconnect()
+            end
+        end)
+
+        local started = os.clock()
+        while not loaded and not game:IsLoaded() and os.clock() - started < 30 do
+            task.wait(0.05)
+        end
+
+        if connection then
+            pcall(function() connection:Disconnect() end)
+        end
+    end
+
+    setProgress(0.18)
+    task.wait(0.12)
+
+    local placeId = game.PlaceId
+    local universeId = game.GameId
+
+    -- Universe routing is checked first so supported games keep working in
+    -- current/future subplaces without adding every PlaceId.
+    local route = UNIVERSE_ROUTES[universeId] or ROUTES[placeId]
+
+    setStatus(
+        "RAINZXDEV Hub",
+        "Finding matching script..."
+    )
+    setProgress(0.30)
+    task.wait(0.20)
+
+    if not route then
+        route = chooseRouteManually(placeId)
+
+        if not route then
+            fail("No Script Selected", "Manual script selection was closed")
+            return
+        end
+    end
+
+    -- Automatic detection and manual selection intentionally converge here.
+    -- Whatever the user selected is the exact published script source that gets fetched,
+    -- compiled, and executed. No preview/fake substitute is used.
+    if cancelled then return end
+
+
+    setStatus(route.name, "Script found")
+    setProgress(0.42)
+    task.wait(0.18)
+
+    setStatus(route.name, "Connecting...")
+    setProgress(0.52)
+
+    local downloadOk, source = fetchSource(route.url)
+
+    if not downloadOk then
+        fail("Download Failed", source)
+        return
+    end
+
+    setStatus(route.name, "Downloading...")
+    setProgress(0.68)
+    task.wait(0.20)
+
+    if #source < 20 then
+        fail("Invalid Script", "Script source returned an unexpectedly small file")
+        return
+    end
+
+    setStatus(route.name, "Preparing...")
+    setProgress(0.78)
+    task.wait(0.15)
+
+    local compiler = loadstring or load
+    if type(compiler) ~= "function" then
+        fail("Compiler Unavailable", "This environment does not provide loadstring/load")
+        return
+    end
+
+    setStatus(route.name, "Compiling...")
+    setProgress(0.88)
+
+    local chunk, compileError = compiler(source)
+    if not chunk then
+        fail("Compile Failed", compileError)
+        return
+    end
+
+    setStatus(route.name, "Launching...")
+    setProgress(0.96)
+
+    local runtimeFinished = false
+    local runtimeOk = true
+    local runtimeError
+
+    task.spawn(function()
+        runtimeOk, runtimeError = pcall(chunk)
+        runtimeFinished = true
+    end)
+
+    -- Catch immediate startup errors without forcing long-running scripts to return.
+    task.wait(0.20)
+    if runtimeFinished and not runtimeOk then
+        fail("Launch Failed", runtimeError)
+        return
+    end
+
+    setProgress(1)
+    progressFill.BackgroundColor3 = THEME.Success
+    accentTop.BackgroundColor3 = THEME.Success
+    autoText.Text = "ready"
+    autoText.TextColor3 = THEME.Success
+    setStatus(route.name, "Loaded successfully", THEME.BrightText)
+
+    task.wait(0.75)
+
+    local fade = tween(
+        card,
+        0.18,
+        {
+            GroupTransparency = 1,
+            Size = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT - 10),
+        },
+        Enum.EasingStyle.Quad,
+        Enum.EasingDirection.In
+    )
+
+    tween(
+        shadow,
+        0.18,
+        {
+            BackgroundTransparency = 1,
+            Size = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT - 10),
+        },
+        Enum.EasingStyle.Quad,
+        Enum.EasingDirection.In
+    )
+
+    fade.Completed:Wait()
+
+    pcall(function()
+        gui:Destroy()
+    end)
+end)
