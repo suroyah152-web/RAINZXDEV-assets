@@ -1634,7 +1634,7 @@ local function showKeyAuthLogin()
             return
         end
 
-        local ok, loginRes = keyauthLogin(user, pass)
+        local ok, loginRes = pcall(keyauthLogin, user, pass)
 
         if ok and type(loginRes) == "table" then
             result = {
@@ -1646,11 +1646,20 @@ local function showKeyAuthLogin()
             task.wait(0.6)
             authGui:Destroy()
         else
-            local why = tostring(loginRes)
-            if #why == 0 or why == "nil" then
+            local why
+            if not ok and type(loginRes) == "string" then
+                why = "EXCEPTION: " .. loginRes
+            else
+                why = tostring(loginRes)
+            end
+            if not why or #why == 0 or why == "nil" then
                 why = "Login gagal (respons kosong) - cek console [RAINZXDEV]"
             end
-            print("[RAINZXDEV] KeyAuth gagal: " .. why)
+            if #why > 150 then
+                why = why:sub(1, 150) .. "..."
+            end
+            print("[RAINZXDEV] KeyAuth gagal -> ok=" .. tostring(ok) .. " res=" .. tostring(loginRes))
+            print("[RAINZXDEV] detail: " .. why)
             statusText.TextColor3 = THEME.Danger
             statusText.Text = why
         end
