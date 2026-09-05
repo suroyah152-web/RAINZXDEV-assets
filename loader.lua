@@ -1358,39 +1358,65 @@ local function urlEncode(text)
     return HttpService:UrlEncode(text)
 end
 
-local function keyauthRequest(params)
-    if KEYAUTH_OWNERID == "ISI_OWNERID_DISINI" or KEYAUTH_APPNAME == "ISI_APPNAME_DISINI" then
-        return nil, "OWNERID / APPNAME belum diisi di loader"
-    end
-
-    local body = "type=" .. urlEncode(tostring(params["type"]))
-        .. "&name=" .. urlEncode(KEYAUTH_APPNAME)
-        .. "&ownerid=" .. urlEncode(KEYAUTH_OWNERID)
+local function keyauthBuildQuery(params)
+    local parts = {
+        "type=" .. urlEncode(tostring(params["type"])),
+        "ver=" .. urlEncode("1.0"),
+        "name=" .. urlEncode(KEYAUTH_APPNAME),
+        "ownerid=" .. urlEncode(KEYAUTH_OWNERID),
+    }
 
     if keyauthSessionId then
-        body = body .. "&sessionid=" .. urlEncode(keyauthSessionId)
+        parts[#parts + 1] = "sessionid=" .. urlEncode(keyauthSessionId)
     end
 
     for key, value in pairs(params) do
         if type(key) == "string" and key ~= "type" then
-            body = body .. "&" .. urlEncode(key) .. "=" .. urlEncode(tostring(value))
+            parts[#parts + 1] = urlEncode(key) .. "=" .. urlEncode(tostring(value))
         end
     end
 
-    local ok, res = pcall(function()
-        return game:HttpPost(KEYAUTH_ENDPOINT, body, "application/x-www-form-urlencoded")
-    end)
+    return table.concat(parts, "&")
+end
 
-    if not ok or type(res) ~= "string" then
+local function keyauthRequest(params)
+    if type(params) ~= "table" then
+        params = {}
+    end
+
+    if KEYAUTH_OWNERID == "ISI_OWNERID_DISINI" or KEYAUTH_APPNAME == "ISI_APPNAME_DISINI" then
+        return nil, "OWNERID / APPNAME belum diisi di loader"
+    end
+
+    local query = keyauthBuildQuery(params)
+    local url = KEYAUTH_ENDPOINT .. "?" .. query
+    local raw = nil
+
+    local okGet, resGet = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if okGet and type(resGet) == "string" and #resGet > 0 then
+        raw = resGet
+    else
+        local okPost, resPost = pcall(function()
+            return game:HttpPost(KEYAUTH_ENDPOINT, query, "application/x-www-form-urlencoded")
+        end)
+        if okPost and type(resPost) == "string" and #resPost > 0 then
+            raw = resPost
+        end
+    end
+
+    if not raw then
         return nil, "Network error saat hubungi KeyAuth"
     end
 
     local okDec, decoded = pcall(function()
-        return HttpService:JSONDecode(res)
+        return HttpService:JSONDecode(raw)
     end)
 
     if not okDec or type(decoded) ~= "table" then
-        return nil, "Response KeyAuth tidak valid"
+        warn("[RAINZXDEV] KeyAuth raw response: " .. tostring(raw):sub(1, 200))
+        return nil, "Response KeyAuth aneh: " .. tostring(raw):sub(1, 90)
     end
 
     return decoded, decoded
@@ -1603,8 +1629,13 @@ local function showKeyAuthLogin()
             task.wait(0.6)
             authGui:Destroy()
         else
+            local why = tostring(loginRes)
+            if #why == 0 or why == "nil" then
+                why = "Login gagal (respons kosong) - cek console [RAINZXDEV]"
+            end
+            print("[RAINZXDEV] KeyAuth gagal: " .. why)
             statusText.TextColor3 = THEME.Danger
-            statusText.Text = tostring(loginRes or "Login gagal")
+            statusText.Text = why
         end
     end)
 
