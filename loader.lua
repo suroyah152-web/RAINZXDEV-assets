@@ -167,20 +167,20 @@ enableAntiAFK()
 local SNIPER_ARENA_ROUTE = {
     name = "Sniper Arena",
     source = "github.com/RAINZXDEV/Sniper-Arena",
-    url = "https://raw.githubusercontent.com/RAINZXDEV/Sniper-Arena/main/Sniper%20Arena.lua",
+    url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/sniper-arena.lua",
 }
 
 
 local ONE_TAP_ROUTE = {
     name = "One Tap",
     source = "github.com/RAINZXDEV/One-Tap",
-    url = "https://raw.githubusercontent.com/RAINZXDEV/One-Tap/main/onetap.lua",
+    url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/onetap.lua",
 }
 
 local KICK_A_LUCKY_BLOCK_ROUTE = {
     name = "Kick a Lucky Block",
     source = "github.com/RAINZXDEV/Kick-a-Lucky-Block",
-    url = "https://raw.githubusercontent.com/RAINZXDEV/Kick-a-Lucky-Block/main/Kick%20a%20Lucky%20Block.lua",
+    url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/kick-lucky-block.lua",
 }
 
 local UNIVERSE_ROUTES = {
@@ -196,47 +196,47 @@ local ROUTES = {
     [83038462357724] = {
         name = "Dig & Clean",
         source = "github.com/RAINZXDEV/Dig-Clean-",
-        url = "https://raw.githubusercontent.com/RAINZXDEV/Dig-Clean-/main/Dig%20%26%20Clean.lua",
+        url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/dig-clean.lua",
     },
     [134162299584012] = {
         name = "Build a Gun Army",
         source = "rainzxdev.site/scripts/build-a-gun-army/autofarm.lua",
-        url = "https://rainzxdev.site/scripts/build-a-gun-army/autofarm.lua",
+        url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/build-gun-army.lua",
     },
     [142823291] = {
         name = "Murder Mystery 2",
         source = "rainzxdev.site/scripts/murder-mystery-2/mm2.lua",
-        url = "https://rainzxdev.site/scripts/murder-mystery-2/mm2.lua",
+        url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/mm2.lua",
     },
     [74889851913797] = {
         name = "+1 Power Per Click",
         source = "github.com/RAINZXDEV/-1-Power-Per-Click",
-        url = "https://raw.githubusercontent.com/RAINZXDEV/-1-Power-Per-Click/main/%2B1%20Power%20Per%20Click.lua",
+        url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/power-per-click.lua",
     },
     [133188236593503] = {
         name = "Magic Loot",
         source = "rainzxdev.site/scripts/magic-loot/autofarm.lua",
-        url = "https://rainzxdev.site/scripts/magic-loot/autofarm.lua",
+        url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/magic-loot.lua",
     },
     [128481067661991] = {
         name = "Get Rich ASAP",
         source = "github.com/RAINZXDEV/Get-rich-asap",
-        url = "https://raw.githubusercontent.com/RAINZXDEV/Get-rich-asap/main/Get%20Rich%20Asap%20Script",
+        url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/get-rich-asap.lua",
     },
     [137233438285284] = {
         name = "Chicken Farm",
         source = "github.com/RAINZXDEV/Chicken-Farm-Auto",
-        url = "https://raw.githubusercontent.com/RAINZXDEV/Chicken-Farm-Auto/main/Chicken%20Empire",
+        url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/chicken-farm.lua",
     },
     [131558436575033] = {
         name = "SevenM Hood",
         source = "github.com/RAINZXDEV/SevenM-Hood",
-        url = "https://raw.githubusercontent.com/RAINZXDEV/SevenM-Hood/main/aim.lua",
+        url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/sevenm-hood.lua",
     },
     [114697347887839] = {
         name = "+1 Speed Monkey Escape",
         source = "github.com/RAINZXDEV/1-Speed-Monkey-Escape",
-        url = "https://raw.githubusercontent.com/RAINZXDEV/1-Speed-Monkey-Escape/main/1%20Speed%20Monkey%20Escape.lua",
+        url = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/scripts/speed-monkey-escape.lua",
     },
     [122446657157717] = SNIPER_ARENA_ROUTE,
     [119259569670784] = SNIPER_ARENA_ROUTE,
