@@ -4119,7 +4119,7 @@ if not compiler then
 end
 
 local uiSource, httpName = Compat.httpGet(
-    "https://raw.githubusercontent.com/RAINZXDEV/Puck-Loader/main/ui/PuckUI.lua"
+    "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/ui/PuckUI.lua"
 )
 
 if not uiSource then

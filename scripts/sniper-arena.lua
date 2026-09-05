@@ -15,7 +15,7 @@ if type(compiler) ~= "function" then
 end
 
 local okUI, uiSource = pcall(function()
-    return game:HttpGet("https://raw.githubusercontent.com/RAINZXDEV/Puck-Loader/main/ui/PuckUI.lua")
+    return game:HttpGet("https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/ui/PuckUI.lua")
 end)
 
 if not okUI or type(uiSource) ~= "string" or #uiSource < 100 then
@@ -107,7 +107,7 @@ do
 
     if type(queueFunction) == "function" and not ENV.__rainzxdev_SNIPER_TELEPORT_QUEUED then
         ENV.__rainzxdev_SNIPER_TELEPORT_QUEUED = true
-        pcall(queueFunction, [[loadstring(game:HttpGet("https://rainzxdev.site/loader.lua"))()]])
+        pcall(queueFunction, [[loadstring(game:HttpGet("https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/loader.lua"))()]])
     end
 end
 

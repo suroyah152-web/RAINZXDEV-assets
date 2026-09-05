@@ -1676,7 +1676,7 @@ end)
 -- rainzxdev SHARED UI
 -- =========================
 -- Every RAINZXDEV game script uses this same UI source. The loader remains separate.
-local PUCK_UI_URL = "https://raw.githubusercontent.com/RAINZXDEV/Puck-Loader/main/ui/PuckUI.lua"
+local PUCK_UI_URL = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/ui/PuckUI.lua"
 local uiCompiler = loadstring or load
 if type(uiCompiler) ~= "function" then
     error("RAINZXDEV: this environment cannot compile the shared UI module", 0)

@@ -139,7 +139,7 @@ local function loadPuckUI()
         return nil
     end
     local okSource, source = pcall(function()
-        return game:HttpGet("https://rainzxdev.site/ui/PuckUI.lua")
+        return game:HttpGet("https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/ui/PuckUI.lua")
     end)
     if not okSource or type(source) ~= "string" or #source < 100 then
         return nil

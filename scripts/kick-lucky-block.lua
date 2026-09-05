@@ -30,7 +30,7 @@ if ENV.__rainzxdev_KALB_CLEANUP then
 end
 
 local okUI, uiSource = pcall(function()
-    return game:HttpGet("https://raw.githubusercontent.com/RAINZXDEV/Puck-Loader/main/ui/PuckUI.lua")
+    return game:HttpGet("https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/ui/PuckUI.lua")
 end)
 if not okUI or type(uiSource) ~= "string" or #uiSource < 100 then
     return

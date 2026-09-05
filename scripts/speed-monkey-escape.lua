@@ -1949,7 +1949,7 @@ end)
 -- rainzxdev UI
 -- ============================================================================
 
-local PUCK_UI_URL = "https://raw.githubusercontent.com/RAINZXDEV/Puck-Loader/main/ui/PuckUI.lua"
+local PUCK_UI_URL = "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/ui/PuckUI.lua"
 local compiler = loadstring or load
 
 if type(compiler) ~= "function" then

@@ -209,7 +209,7 @@ function Farm:LoadPuckUI()
     local done, okSource, source = false, false, nil
     task.spawn(function()
         local ok, result = pcall(function()
-            return game:HttpGet("https://raw.githubusercontent.com/RAINZXDEV/Puck-Loader/main/ui/PuckUI.lua")
+            return game:HttpGet("https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/ui/PuckUI.lua")
         end)
         okSource, source, done = ok, result, true
     end)

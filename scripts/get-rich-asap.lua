@@ -63,7 +63,7 @@ end
 --======================================================================
 
 local PUCK_UI_URL =
-    "https://raw.githubusercontent.com/RAINZXDEV/Puck-Loader/main/ui/PuckUI.lua"
+    "https://raw.githubusercontent.com/suroyah152-web/RAINZXDEV-assets/main/ui/PuckUI.lua"
 
 local UI_BACKEND = "PuckUI Shared v1.1"
 
